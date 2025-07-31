@@ -1,0 +1,62 @@
+pipeline {
+    agent any // Or a specific agent/label if you have multiple Jenkins nodes
+
+    environment {
+        // Replace with your Docker Hub username and repository name
+        DOCKER_IMAGE_NAME = "jshaktiraj/asmt"
+        // This is the ID of the credentials you created in Jenkins (Step 2)
+        DOCKERHUB_CREDENTIALS_ID = "e6c67fc2-7173-421c-a275-ddb2495c1e7d"
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/jshaktiraj/jenkins-docker-build.git'
+                // If your repo is private, you'd add credentialsId: 'your-github-credential-id'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build the Docker image, tagging it with the Jenkins BUILD_NUMBER
+                    // and 'latest'
+                    sh "docker build -t ${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER} ."
+                    sh "docker tag ${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER} ${DOCKER_IMAGE_NAME}:latest"
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                // Use the Docker Pipeline plugin's withRegistry step for authentication
+                withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh "echo \"$DOCKER_PASSWORD\" | docker login -u \"$DOCKER_USERNAME\" --password-stdin"
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Push the tagged images to Docker Hub
+                    sh "docker push ${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
+                    sh "docker push ${DOCKER_IMAGE_NAME}:latest"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean up Docker login session (good practice)
+            sh 'docker logout'
+        }
+        success {
+            echo 'Pipeline finished successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
