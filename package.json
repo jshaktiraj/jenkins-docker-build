@@ -1,0 +1,14 @@
+{
+  "name": "my-simple-node-app",
+  "version": "1.0.0",
+  "description": "A very basic Node.js application for Docker demo.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
